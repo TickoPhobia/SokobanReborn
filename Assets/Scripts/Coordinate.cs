@@ -20,5 +20,9 @@ public class Coordinate {
 		public static Vector3 CoordinateToWorldPosition(Coordinate origin) {
 			return new Vector3(origin.x, 0f, origin.y);
 		}
+		
+		public override string ToString() {
+			return string.Format("X:{0}, Y{1}", x, y);
+		}
 	
 }

@@ -1,12 +1,16 @@
 ﻿using UnityEngine;
-using System;
-
 
 public class Root : MonoBehaviour {
+	
+	public GUISkin DefaultSkin;
 	
 	public GameObject GroundPlaceHolderPrefab;
 	public GameObject WallPrefab;
 	public GameObject BoxPrefab;
+	
+	public GameObject GoalPrefab;
+	
+	public GameObject SokobanPlayerPrefab;
 
   	public int Height;
    	public int Width;
@@ -14,14 +18,29 @@ public class Root : MonoBehaviour {
 	
 	public Cell[,] Grid;
 	
+	public GameState CurrentGameState = GameState.NotStarted;
+	private int _totalGridGoals;
+	public int TotalGridGoals {
+		get {return _totalGridGoals;}
+		set { 
+			_totalGridGoals = value;
+			CheckGameStatus();
+			}
+	}
+	
 	public void Start() {
 		InitializeGrid();
-
-		if(CurrentPlayer != null)
-			CurrentPlayer.MovePlayerTo(new Coordinate(2,2));
 	}
 	
 	public void InitializeGrid() {
+
+		TextAsset textFile = (TextAsset)Resources.Load("Levels/3", typeof(TextAsset));
+	
+		var levelDef = GameDefinition.ParseString(textFile.text);
+				
+		Width = levelDef.GridSize.x;
+		Height = levelDef.GridSize.y;		
+				
 		Grid = new Cell[Width, Height];
 		
 		for (int i = 0; i < Width; i++) {
@@ -29,34 +48,32 @@ public class Root : MonoBehaviour {
 				Grid[i,j] = new Cell();
 			}
 		} 
+				
+				
+		CreatePlayer(levelDef.PlayerDefaultLocation);
+		CreateBox(levelDef.Boxes);
+		CreateWall(levelDef.Walls);
+		MarkCellAsGoal(levelDef.Goals);
 		
+		TotalGridGoals = levelDef.Goals.Length;
 		
-		LoadCells("nil");
+		CurrentGameState = GameState.Playing;
 	}
 
 	public void SetCell(Coordinate index, Cell newCell) {
 		Grid[index.x, index.y] = newCell;
 	}
 	
-	public void LoadCells(String str) {
-		//TODO: 
-		var boxes = new Coordinate[] { new Coordinate(1,3), new Coordinate(2,0)};
+	public void CreatePlayer(Coordinate location) {
+		var SokobanPlayerGaObj = (GameObject) Instantiate(SokobanPlayerPrefab, Vector3.zero, Quaternion.identity );
+		CurrentPlayer = SokobanPlayerGaObj.GetComponent<SokobanPlayer>();	
 		
-		
-		var walls =  new Coordinate[2*Width + 4]; //{ new Coordinate(0,0), new Coordinate(0,1), new Coordinate(0,2), new Coordinate(0,3)};
-		for (int i = 0; i < Width; i++) {
-			walls[i] = new Coordinate(i,0);
-			walls[i+Width] = new Coordinate(i,Height-1);
+		if(CurrentPlayer != null) {
+			CurrentPlayer.ReferenceToRoot = this;
+			CurrentPlayer.MovePlayerTo(location);	
 		}
-		walls[2*Width] = new Coordinate(2,3);
-		walls[2*Width+1] = new Coordinate(3,5);
-		walls[2*Width+2] = new Coordinate(5,1);
-		walls[2*Width+3] = new Coordinate(4,3);
-		
-		CreateBox(boxes);
-		CreateWall(walls);
 	}
-	
+	 
 	public void CreateBox(Coordinate[] locations) {
 		foreach (var box in locations) {
 			Grid[box.x,box.y].State = CellStatus.Box;
@@ -76,6 +93,18 @@ public class Root : MonoBehaviour {
 				Grid[wall.x,wall.y].AttachedTransform = newWall.transform;
 			}
 		}
+	}
+	
+	public void MarkCellAsGoal(Coordinate[] locations) {
+		foreach (var goal in locations) {
+			Grid[goal.x,goal.y].IsGoal = true;
+			
+			if(GoalPrefab != null) {
+				var newGoal = (GameObject) Instantiate(GoalPrefab, Coordinate.CoordinateToWorldPosition(goal), Quaternion.identity);
+				Grid[goal.x,goal.y].AttachedTransform = newGoal.transform;
+			}
+		}
+		
 	}
 
 	public bool ValidPositionForPlayer(Coordinate location) {
@@ -112,7 +141,34 @@ public class Root : MonoBehaviour {
 		Grid[cellCoordinate.x, cellCoordinate.y].State = CellStatus.Free;
 		Grid[cellCoordinate.x, cellCoordinate.y].AttachedTransform = null;
 		
+		if (Grid[cellCoordinate.x, cellCoordinate.y].IsGoal) {
+			TotalGridGoals++;
+		} 
 		
+		if (Grid[targetCell.x, targetCell.y].IsGoal) {
+			TotalGridGoals--;
+		} 
 		
+	}
+	
+	public void CheckGameStatus() {
+		if(TotalGridGoals>0) {
+			
+		} else {
+			CurrentGameState = GameState.GameOver;
+		}
+	}
+	
+	
+	public void OnGUI() {
+		
+		switch(CurrentGameState){
+			case GameState.Playing:
+				GUI.Label(new Rect(10,10,100,45), TotalGridGoals.ToString(), DefaultSkin.label);
+				break;
+			case GameState.GameOver:
+				GUI.Label(new Rect(10,10,300,45), "YOU WON!", DefaultSkin.label);
+				break;
+		}
 	}
 }

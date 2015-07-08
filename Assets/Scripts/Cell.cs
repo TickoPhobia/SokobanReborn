@@ -9,6 +9,7 @@ public enum CellStatus{
 	
 public class Cell {
 	private bool _isEmpty = true;
+	private bool _isMarkedAsGoal = false;
 	private CellStatus _cellState;
 	public Transform AttachedTransform; 	
 	
@@ -28,6 +29,12 @@ public class Cell {
 				AttachedTransform = null;
 			}
 		}
+	}
+	
+	public bool IsGoal {
+		
+		get{ return _isMarkedAsGoal;}
+		set { _isMarkedAsGoal = value;}
 	}
 	
 	public bool IsEmpty {

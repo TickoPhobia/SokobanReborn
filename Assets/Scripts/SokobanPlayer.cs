@@ -10,12 +10,12 @@ public class SokobanPlayer : MonoBehaviour {
 			if (ReferenceToRoot == null) {
 				Debug.Log("ERROR: Missing Reference to Root Element of Game");
 			}
-			
 		}
 		public void Update () {
-			HandleInputs();
+			if (ReferenceToRoot.CurrentGameState == GameState.Playing) {
+				HandleInputs();	
+			}
 		}
-		
 		public void HandleInputs () {
 			
 			
